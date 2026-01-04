@@ -22,7 +22,9 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
     forwarded_values {
       query_string = false
-      cookies { forward = "none" }
+      cookies {
+        forward = "none"
+      }
     }
 
     viewer_protocol_policy = "redirect-to-https"
@@ -41,8 +43,3 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     cloudfront_default_certificate = true
   }
 }
-
-output "cloudfront_url" {
-  value = aws_cloudfront_distribution.s3_distribution.domain_name
-}
-

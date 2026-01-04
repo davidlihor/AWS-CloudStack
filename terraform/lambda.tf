@@ -1,7 +1,3 @@
-locals {
-  lambda_names = ["create_task", "get_tasks", "update_task", "delete_task"]
-}
-
 data "archive_file" "lambda_zip" {
   for_each    = toset(local.lambda_names)
   type        = "zip"
@@ -24,4 +20,14 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
       TABLE_NAME = aws_dynamodb_table.cloudstack_table.name
     }
   }
+}
+
+resource "aws_lambda_permission" "apigw_lambda" {
+  for_each      = aws_lambda_function.cloudstack_lambdas
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = each.value.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 }
