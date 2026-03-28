@@ -37,13 +37,13 @@ module "s3-bucket" {
 
 resource "aws_s3_object" "frontend_files" {
   for_each = {
-    for f in fileset("${path.module}/../frontend/", "**") : f => f
+    for f in fileset("${path.module}/../frontend/dist", "**") : f => f
     if f != "config.js"
   }
 
   bucket       = module.s3-bucket.s3_bucket_id
   key          = each.value
-  source       = "${path.module}/../frontend/${each.value}"
+  source       = "${path.module}/../frontend/dist/${each.value}"
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), "text/plain")
   depends_on   = [module.s3-bucket]
 }
@@ -56,12 +56,12 @@ resource "aws_s3_object" "config_js" {
   content = templatefile("${path.module}/../frontend/config.js", {
     user_pool_id = aws_cognito_user_pool.pool.id
     client_id    = aws_cognito_user_pool_client.client.id
-    api_url      = aws_api_gateway_stage.prod.invoke_url
+    api_url      = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
     region       = var.region
   })
 
   depends_on = [
     module.s3-bucket,
-    aws_api_gateway_stage.prod
+    aws_cloudfront_distribution.s3_distribution
   ]
 }

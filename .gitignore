@@ -1,7 +1,7 @@
 **/files
 
 # Terraform state files
-*.tfstate
+*.tfstate*
 *.tfstate.backup
 *.zip
 *.backup

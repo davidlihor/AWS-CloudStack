@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudStack - Manage Your Tasks in the Cloud</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
     <div id="landing-page" class="page active">
@@ -106,7 +106,7 @@
                 <ul id="task-list" class="task-list">
                 </ul>
                 <div id="empty-state" class="empty-state">
-                    <p>No tasks yet. Add one above to get started! 🚀</p>
+                    <p>No tasks yet. Add one above to get started!</p>
                 </div>
             </div>
         </main>
@@ -116,9 +116,10 @@
         <div class="spinner"></div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="auth.js"></script>
-    <script src="api.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="src/config.ts"></script>
+    <script type="module" src="src/auth.ts"></script>
+    <script type="module" src="src/api.ts"></script>
+    <script type="module" src="src/main.ts"></script>
+    <script src="/config.js"></script>
 </body>
 </html>

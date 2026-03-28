@@ -29,3 +29,23 @@ output "dynamodb_table_name" {
   value       = aws_dynamodb_table.cloudstack_table.name
 }
 
+
+output "cloudfront_distribution_id" {
+  value       = aws_cloudfront_distribution.s3_distribution.id
+  description = "CloudFront Distribution ID"
+}
+
+output "cloudfront_domain_name" {
+  value       = aws_cloudfront_distribution.s3_distribution.domain_name
+  description = "CloudFront Domain Name"
+}
+
+output "waf_web_acl_id" {
+  value       =  aws_wafv2_web_acl.cloudfront_waf.id
+  description = "WAF Web ACL ID"
+}
+
+output "api_endpoint_via_cloudfront" {
+  value       = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}/tasks"
+  description = "API endpoint via CloudFront"
+}
