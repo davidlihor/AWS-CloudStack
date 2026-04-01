@@ -2,6 +2,8 @@ class CloudTaskApp {
     constructor() {
         this.tasks = [];
         this.currentFilter = 'all';
+        this.pendingDeleteTaskId = null;
+        this.uploadingTaskId = null;
         this.init();
     }
 
@@ -28,6 +30,13 @@ class CloudTaskApp {
         document.getElementById('task-form')?.addEventListener('submit', (e) => this.handleAddTask(e));
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.handleFilterChange(e));
+        });
+
+        // Delete modal events
+        document.getElementById('cancel-delete')?.addEventListener('click', () => this.hideDeleteModal());
+        document.getElementById('confirm-delete')?.addEventListener('click', () => this.confirmDelete());
+        document.getElementById('delete-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'delete-modal') this.hideDeleteModal();
         });
     }
 
@@ -187,7 +196,9 @@ class CloudTaskApp {
 
     async loadTasks() {
         try {
-            this.tasks = await api.getTasks();
+            const response = await api.getTasks();
+            console.log('Raw tasks from API:', JSON.stringify(response, null, 2));
+            this.tasks = response;
             this.renderTasks();
         } catch (error) {
             console.error('Error loading tasks:', error);
@@ -237,22 +248,106 @@ class CloudTaskApp {
     }
 
     async handleDeleteTask(taskId) {
-        if (!confirm('Are you sure you want to delete this task?')) {
+        console.log('handleDeleteTask called with taskId:', taskId);
+        if (!taskId || taskId === 'null' || taskId === 'undefined') {
+            console.error('Invalid taskId for delete:', taskId);
+            alert('Error: Invalid task ID');
+            return;
+        }
+        this.pendingDeleteTaskId = taskId;
+        document.getElementById('delete-modal').classList.add('show');
+    }
+
+    hideDeleteModal() {
+        this.pendingDeleteTaskId = null;
+        document.getElementById('delete-modal').classList.remove('show');
+    }
+
+    async confirmDelete() {
+        const taskIdToDelete = this.pendingDeleteTaskId;
+        console.log('confirmDelete called, taskIdToDelete:', taskIdToDelete);
+        if (!taskIdToDelete) {
+            console.error('No pending delete task ID');
             return;
         }
 
+        this.hideDeleteModal();
         this.showLoading();
 
         try {
-            await api.deleteTask(taskId);
-            
-            this.tasks = this.tasks.filter(t => t.taskId !== taskId);
+            console.log('About to call api.deleteTask with:', taskIdToDelete);
+            console.log('Type of taskIdToDelete:', typeof taskIdToDelete);
+            const result = await api.deleteTask(taskIdToDelete);
+            console.log('api.deleteTask result:', result);
+            this.tasks = this.tasks.filter(t => t.taskId !== taskIdToDelete);
             this.renderTasks();
         } catch (error) {
+            console.error('Error in confirmDelete:', error);
             alert('Error deleting task: ' + error.message);
         } finally {
             this.hideLoading();
         }
+    }
+
+    async handleGetUploadUrl(taskId) {
+        if (this.uploadingTaskId) return;
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.png,.jpg,.jpeg';
+        
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            this.uploadingTaskId = taskId;
+            this.renderTasks();
+
+            try {
+                const { uploadURL } = await api.getUploadUrl(taskId);
+                
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        const progressBar = document.querySelector(`li[data-task-id="${taskId}"] .progress-fill`);
+                        if (progressBar) {
+                            progressBar.style.width = percentComplete + '%';
+                        }
+                    }
+                };
+
+                await new Promise((resolve, reject) => {
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(null);
+                        } else {
+                            reject(new Error('Failed to upload file'));
+                        }
+                    };
+                    xhr.onerror = () => reject(new Error('Upload failed'));
+                    xhr.open('PUT', uploadURL, true);
+                    xhr.setRequestHeader('Content-Type', file.type);
+                    xhr.send(file);
+                });
+
+                // Upload complete - progress bar will show 100%
+                const progressBar = document.querySelector(`li[data-task-id="${taskId}"] .progress-fill`);
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                }
+            } catch (error) {
+                alert('Error uploading file: ' + error.message);
+            } finally {
+                setTimeout(() => {
+                    this.uploadingTaskId = null;
+                    this.renderTasks();
+                }, 500);
+            }
+        };
+
+        fileInput.click();
     }
 
     handleFilterChange(e) {
@@ -291,6 +386,13 @@ class CloudTaskApp {
         emptyState.style.display = 'none';
 
         taskList.innerHTML = filteredTasks.map(task => {
+            const taskId = task.taskId || task.id;
+            if (!taskId) {
+                console.error('Task has no ID, skipping:', task);
+                return '';
+            }
+            
+            console.log('Rendering task with ID:', taskId);
             const date = new Date(task.createdAt);
             const formattedDate = date.toLocaleDateString('en-US', {
                 month: 'short',
@@ -298,22 +400,46 @@ class CloudTaskApp {
                 year: 'numeric'
             });
 
+            const isUploading = this.uploadingTaskId === taskId;
+            const isAnotherUploading = this.uploadingTaskId && this.uploadingTaskId !== taskId;
+
             return `
-                <li class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.taskId}">
-                    <input 
-                        type="checkbox" 
-                        class="task-checkbox" 
-                        ${task.completed ? 'checked' : ''}
-                        onchange="app.handleToggleTask('${task.taskId}', this.checked)"
-                    >
-                    <span class="task-content">${this.escapeHtml(task.title)}</span>
-                    <span class="task-date">${formattedDate}</span>
-                    <button 
-                        class="btn btn-danger" 
-                        onclick="app.handleDeleteTask('${task.taskId}')"
-                    >
-                        Delete
-                    </button>
+                <li class="task-item ${task.completed ? 'completed' : ''} ${isUploading ? 'uploading' : ''}" data-task-id="${taskId}">
+                    <label class="task-checkbox-wrapper">
+                        <input 
+                            type="checkbox" 
+                            ${task.completed ? 'checked' : ''}
+                            onchange="app.handleToggleTask('${taskId}', this.checked)"
+                        >
+                        <span class="checkbox-custom"></span>
+                    </label>
+                    <div class="task-item-content">
+                        <div class="task-row">
+                            <span class="task-content">${this.escapeHtml(task.title)}</span>
+                            <span class="task-date">${formattedDate}</span>
+                            <div class="task-item-buttons">
+                                <button 
+                                    class="btn btn-secondary btn-upload" 
+                                    onclick="app.handleGetUploadUrl('${taskId}')"
+                                    ${isAnotherUploading ? 'disabled' : ''}
+                                >
+                                    ${isUploading ? 'Uploading...' : 'Upload'}
+                                </button>
+                                <button 
+                                    class="btn btn-danger" 
+                                    onclick="app.handleDeleteTask('${taskId}')"
+                                    ${isAnotherUploading ? 'disabled' : ''}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        ${isUploading ? `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        ` : ''}
+                    </div>
                 </li>
             `;
         }).join('');

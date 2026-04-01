@@ -3,10 +3,12 @@ locals {
     "create_task",
     "get_tasks",
     "update_task",
-    "delete_task"
+    "delete_task",
+    "get_upload_url"
   ]
 
   bucket_name = "cloudstack-project-${random_string.suffix.result}"
+  bucket_data = "cloudstack-data-${random_string.suffix.result}"
 
   mime_types = {
     ".html" = "text/html"
@@ -25,11 +27,14 @@ locals {
     "GET_tasks"     = { res = aws_api_gateway_resource.tasks.id, method = "GET", lambda = "get_tasks" }
     "PUT_taskId"    = { res = aws_api_gateway_resource.task_id.id, method = "PUT", lambda = "update_task" }
     "DELETE_taskId" = { res = aws_api_gateway_resource.task_id.id, method = "DELETE", lambda = "delete_task" }
+    "POST_upload"   = { res = aws_api_gateway_resource.upload_url.id, method = "POST", lambda = "get_upload_url" }
   }
 
   cors_resources = {
     "tasks"  = aws_api_gateway_resource.tasks.id
     "taskId" = aws_api_gateway_resource.task_id.id
+    "upload_url" = aws_api_gateway_resource.upload_url.id
   }
 }
+
 

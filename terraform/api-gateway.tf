@@ -112,3 +112,9 @@ resource "aws_api_gateway_integration_response" "options_int_resp" {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 }
+
+resource "aws_api_gateway_resource" "upload_url" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "upload-url"
+}

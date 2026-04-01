@@ -18,6 +18,7 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
   environment {
     variables = {
       TABLE_NAME = aws_dynamodb_table.cloudstack_table.name
+      BUCKET_NAME = module.s3_data.s3_bucket_id
     }
   }
 }
@@ -30,4 +31,25 @@ resource "aws_lambda_permission" "apigw_lambda" {
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
+}
+
+resource "aws_iam_role_policy" "lambda_upload_policy" {
+  name = "lambda_upload_s3_dynamo_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem"]
+        Resource = aws_dynamodb_table.cloudstack_table.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject"]
+        Resource = "${module.s3_data.s3_bucket_arn}/*"
+      }
+    ]
+  })
 }

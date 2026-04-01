@@ -88,6 +88,21 @@ class API {
             throw error;
         }
     }
+
+    async getUploadUrl(taskId) {
+        try {
+            const response = await fetch(`${this.baseURL}/upload-url`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ taskId, extension: 'png' })
+            });
+
+            return await this.handleResponse(response);
+        } catch (error) {
+            console.error('Error getting upload URL:', error);
+            throw error;
+        }
+    }
 }
 
 window.api = new API();

@@ -1,6 +1,6 @@
 module "s3-bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "5.9.1"
+  version = "5.11.0"
 
   bucket = local.bucket_name
 
@@ -44,6 +44,7 @@ resource "aws_s3_object" "frontend_files" {
   bucket       = module.s3-bucket.s3_bucket_id
   key          = each.value
   source       = "${path.module}/../frontend/dist/${each.value}"
+  source_hash  = filemd5("${path.module}/../frontend/dist/${each.value}")
   content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), "text/plain")
   depends_on   = [module.s3-bucket]
 }
@@ -59,6 +60,13 @@ resource "aws_s3_object" "config_js" {
     api_url      = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
     region       = var.region
   })
+
+  etag = md5(templatefile("${path.module}/../frontend/config.js", {
+    user_pool_id = aws_cognito_user_pool.pool.id
+    client_id    = aws_cognito_user_pool_client.client.id
+    api_url      = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    region       = var.region
+  }))
 
   depends_on = [
     module.s3-bucket,
