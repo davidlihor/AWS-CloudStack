@@ -1,24 +1,34 @@
-resource "aws_iam_role" "lambda_role" {
-  name = "cloudstack_lambda_role"
+resource "aws_iam_role" "lambda_roles" {
+  for_each = local.lambda_configs
+  name     = "CloudStack-Role-${each.key}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Action    = "sts:AssumeRole"
       Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
+      Principal = {
+        Service = [
+          "lambda.amazonaws.com",
+          "states.amazonaws.com",
+          "pipes.amazonaws.com"
+        ]
+      }
     }]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_role.name
+  for_each   = aws_iam_role.lambda_roles
+  role       = each.value.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_policy" "dynamodb_lambda_policy" {
-  name        = "CloudStackDynamoDBPolicy"
-  description = "Policy allowing Lambda functions to access DynamoDB table"
+resource "aws_iam_role_policy" "dynamo_access" {
+  for_each = { for k, v in local.lambda_configs : k => v if v.needs_dynamo }
+  
+  name = "DynamoAccess-${each.key}"
+  role = aws_iam_role.lambda_roles[each.key].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -37,7 +47,77 @@ resource "aws_iam_policy" "dynamodb_lambda_policy" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_dynamo" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.dynamodb_lambda_policy.arn
+resource "aws_iam_role_policy" "s3_access" {
+  for_each = { for k, v in local.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) }
+  
+  name = "S3Access-${each.key}"
+  role = aws_iam_role.lambda_roles[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = compact([
+        lookup(each.value, "needs_s3_read", false) ? "s3:GetObject" : null,
+        each.value.needs_s3_write ? "s3:PutObject" : null
+      ])
+      Resource = ["${module.s3_data.s3_bucket_arn}/*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "pipe_and_sfn_access" {
+  name = "PipeAndSfnAccess"
+  role = aws_iam_role.lambda_roles["resizer"].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "states:StartExecution"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "step_function_invoke_lambda" {
+  name = "StepFunctionInvokeLambdaPolicy"
+  role = aws_iam_role.lambda_roles["resizer"].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "lambda:InvokeFunction"
+        Resource = [
+          aws_lambda_function.cloudstack_lambdas["resizer"].arn,
+          "${aws_lambda_function.cloudstack_lambdas["resizer"].arn}:*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_kms_policy" {
+  name = "LambdaKMSSigningPolicy"
+  role = aws_iam_role.lambda_roles["signer"].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = "kms:Sign"
+        Effect   = "Allow"
+        Resource = aws_kms_key.cloudfront_signer.arn
+      }
+    ]
+  })
 }

@@ -53,3 +53,8 @@ resource "aws_s3_bucket_policy" "allow_access_from_cloudfront" {
     ]
   })
 }
+
+resource "aws_s3_bucket_notification" "s3_eventbridge_notify" {
+  bucket      = module.s3_data.s3_bucket_id
+  eventbridge = true
+}

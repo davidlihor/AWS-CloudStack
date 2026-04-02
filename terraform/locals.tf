@@ -1,11 +1,13 @@
 locals {
-  lambda_names = [
-    "create_task",
-    "get_tasks",
-    "update_task",
-    "delete_task",
-    "get_upload_url"
-  ]
+  lambda_configs = {
+    "create_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "get_tasks" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "update_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "delete_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "get_upload_url" = { timeout = 3, memory = 128, needs_s3_write = true,  needs_dynamo = true }
+    "resizer"    = { timeout = 30, memory = 1024, needs_s3_read = true, needs_s3_write = true, needs_dynamo = false }
+    "signer"     = { timeout = 3, memory = 128, needs_s3_write = false,  needs_dynamo = false }
+  }
 
   bucket_name = "cloudstack-project-${random_string.suffix.result}"
   bucket_data = "cloudstack-data-${random_string.suffix.result}"
@@ -28,6 +30,7 @@ locals {
     "PUT_taskId"    = { res = aws_api_gateway_resource.task_id.id, method = "PUT", lambda = "update_task" }
     "DELETE_taskId" = { res = aws_api_gateway_resource.task_id.id, method = "DELETE", lambda = "delete_task" }
     "POST_upload"   = { res = aws_api_gateway_resource.upload_url.id, method = "POST", lambda = "get_upload_url" }
+    "GET_access"    = { res = aws_api_gateway_resource.get_access.id, method = "GET", lambda = "signer" }
   }
 
   cors_resources = {

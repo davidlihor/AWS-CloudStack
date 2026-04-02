@@ -1,55 +1,43 @@
 data "archive_file" "lambda_zip" {
-  for_each    = toset(local.lambda_names)
+  for_each    = local.lambda_configs
   type        = "zip"
-  source_file = "${path.module}/../lambda-functions/${each.value}.py"
-  output_path = "${path.module}/files/${each.value}.zip"
+  source_file = "${path.module}/../lambda-functions/${each.key}.py"
+  output_path = "${path.module}/files/${each.key}.zip"
 }
 
 resource "aws_lambda_function" "cloudstack_lambdas" {
-  for_each      = toset(local.lambda_names)
-  function_name = "CloudStack-${each.value}"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "${each.value}.lambda_handler"
+  for_each      = local.lambda_configs
+  
+  function_name = "CloudStack-${each.key}"
+  role          = aws_iam_role.lambda_roles[each.key].arn
+  handler       = "${each.key}.lambda_handler"
   runtime       = "python3.12"
 
-  filename         = data.archive_file.lambda_zip[each.value].output_path
-  source_code_hash = data.archive_file.lambda_zip[each.value].output_base64sha256
+  memory_size      = each.value.memory
+  timeout          = each.value.timeout
+
+  layers           = each.key == "resizer" ? ["arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-Pillow:7"] : []
+  
+  filename         = data.archive_file.lambda_zip[each.key].output_path
+  source_code_hash = data.archive_file.lambda_zip[each.key].output_base64sha256
 
   environment {
     variables = {
       TABLE_NAME = aws_dynamodb_table.cloudstack_table.name
       BUCKET_NAME = module.s3_data.s3_bucket_id
+      KMS_KEY_ID = aws_kms_key.cloudfront_signer.arn
+      CLOUDFRONT_KEY_ID = aws_cloudfront_public_key.app_key.id
     }
   }
 }
 
 resource "aws_lambda_permission" "apigw_lambda" {
-  for_each      = aws_lambda_function.cloudstack_lambdas
+  for_each      = { for k, v in aws_lambda_function.cloudstack_lambdas : k => v if k != "resizer" }
+
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = each.value.function_name
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
-}
-
-resource "aws_iam_role_policy" "lambda_upload_policy" {
-  name = "lambda_upload_s3_dynamo_policy"
-  role = aws_iam_role.lambda_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["dynamodb:GetItem"]
-        Resource = aws_dynamodb_table.cloudstack_table.arn
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["s3:PutObject"]
-        Resource = "${module.s3_data.s3_bucket_arn}/*"
-      }
-    ]
-  })
 }

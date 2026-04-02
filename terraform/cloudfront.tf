@@ -56,21 +56,25 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 
   ordered_cache_behavior {
-    path_pattern     = "/images/*"
+    path_pattern     = "/users*"
     target_origin_id = "S3-Data-Origin"
+
+    trusted_key_groups = [aws_cloudfront_key_group.app_key_group.id]
 
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
 
     forwarded_values {
-      query_string = false
-      cookies { forward = "none" }
+      query_string = true
+      cookies {
+        forward = "all"
+      }
     }
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
-    default_ttl            = 86400
-    max_ttl                = 31536000
+    default_ttl            = 0
+    max_ttl                = 0
   }
 
   ordered_cache_behavior {
@@ -160,3 +164,24 @@ resource "null_resource" "cloudfront_invalidation" {
   depends_on = [aws_s3_object.frontend_files, aws_s3_object.config_js]
 }
 
+resource "aws_cloudfront_public_key" "app_key" {
+  name        = "user-photos-key"
+  encoded_key = <<-EOF
+-----BEGIN PUBLIC KEY-----
+${replace(data.aws_kms_public_key.pub.public_key, "\n", "")}
+-----END PUBLIC KEY-----
+EOF
+
+  lifecycle {
+    ignore_changes = [encoded_key]
+  }
+}
+
+resource "aws_cloudfront_key_group" "app_key_group" {
+  name    = "app-key-group"
+  items   = [aws_cloudfront_public_key.app_key.id]
+
+  lifecycle {
+    ignore_changes = [items]
+  }
+}
