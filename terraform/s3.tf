@@ -58,6 +58,7 @@ resource "aws_s3_object" "config_js" {
     user_pool_id = aws_cognito_user_pool.pool.id
     client_id    = aws_cognito_user_pool_client.client.id
     api_url      = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    cloudfront_domain = aws_cloudfront_distribution.s3_distribution.domain_name
     region       = var.region
   })
 
@@ -65,6 +66,7 @@ resource "aws_s3_object" "config_js" {
     user_pool_id = aws_cognito_user_pool.pool.id
     client_id    = aws_cognito_user_pool_client.client.id
     api_url      = "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    cloudfront_domain = aws_cloudfront_distribution.s3_distribution.domain_name
     region       = var.region
   }))
 

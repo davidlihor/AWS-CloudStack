@@ -121,6 +121,28 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     compress               = true
   }
 
+  ordered_cache_behavior {
+    path_pattern     = "/get-access*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "API-Gateway-Origin"
+
+    forwarded_values {
+      query_string = false
+      headers      = ["Authorization", "X-CloudFront-Domain"]
+
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "https-only"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = true
+  }
+
   custom_error_response {
     error_code         = 404
     response_code      = 404

@@ -5,7 +5,7 @@ locals {
     "update_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
     "delete_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
     "get_upload_url" = { timeout = 3, memory = 128, needs_s3_write = true,  needs_dynamo = true }
-    "resizer"    = { timeout = 30, memory = 1024, needs_s3_read = true, needs_s3_write = true, needs_dynamo = false }
+    "resizer"    = { timeout = 30, memory = 1024, needs_s3_read = true, needs_s3_write = true, needs_dynamo = true }
     "signer"     = { timeout = 3, memory = 128, needs_s3_write = false,  needs_dynamo = false }
   }
 

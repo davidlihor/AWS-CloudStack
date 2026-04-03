@@ -1,9 +1,12 @@
 import boto3
 import io
 import json
+import os
 from PIL import Image
 
 s3 = boto3.client('s3')
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(os.environ['TABLE_NAME'])
 
 def lambda_handler(event, context):
     try:
@@ -34,6 +37,10 @@ def lambda_handler(event, context):
         if not object_key.endswith('photo.png'):
             return {'statusCode': 200, 'body': f'Skipped {object_key}'}
 
+        parts = object_key.strip('/').split('/')
+        user_id = parts[1] 
+        task_id = parts[2]
+
         response = s3.get_object(Bucket=bucket_name, Key=object_key)
         image_content = response['Body'].read()
 
@@ -52,10 +59,23 @@ def lambda_handler(event, context):
                 ContentType=response.get('ContentType', 'image/png')
             )
 
+        print(f"Updating DynamoDB for Task {task_id}...")
+        table.update_item(
+            Key={
+                'userId': user_id,
+                'taskId': task_id
+            },
+            UpdateExpression="SET hasImage = :val",
+            ExpressionAttributeValues={
+                ':val': True
+            }
+        )
+
         return {
             'statusCode': 200,
             'original': object_key,
-            'thumbnail': new_key
+            'thumbnail': new_key,
+            'db_status': 'updated'
         }
 
     except Exception as e:
