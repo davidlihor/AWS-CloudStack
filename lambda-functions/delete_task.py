@@ -2,28 +2,49 @@ import json
 import boto3
 import os
 
-dynamodb = boto3.resource('dynamodb')
-table_name = os.environ.get('TABLE_NAME', 'CloudTaskTable')
-table = dynamodb.Table(table_name)
+sqs = boto3.client('sqs')
+QUEUE_URL = os.environ.get('DELETE_QUEUE_URL')
 
 def lambda_handler(event, context):
     try:
         user_id = event['requestContext']['authorizer']['claims']['sub']
         task_id = event['pathParameters']['taskId']
 
-        table.delete_item(
-            Key={
-                'userId': user_id,
-                'taskId': task_id
+        message = {
+            'userId': user_id,
+            'taskId': task_id,
+            'requestedAt': context.aws_request_id,
+            'source': 'api_gateway'
+        }
+
+        response = sqs.send_message(
+            QueueUrl=QUEUE_URL,
+            MessageBody=json.dumps(message),
+            MessageAttributes={
+                'taskId': {
+                    'StringValue': task_id,
+                    'DataType': 'String'
+                },
+                'userId': {
+                    'StringValue': user_id,
+                    'DataType': 'String'
+                }
             }
         )
-        
+
+        print(f"Queued deletion: task={task_id}, messageId={response['MessageId']}")
+
         return {
-            'statusCode': 200,
+            'statusCode': 202,
             'headers': get_cors_headers(),
-            'body': json.dumps({'message': 'Task deleted successfully'})
+            'body': json.dumps({
+                'message': 'Task deletion queued successfully',
+                'taskId': task_id,
+                'messageId': response['MessageId'],
+                'status': 'PENDING_CLEANUP'
+            })
         }
-        
+
     except KeyError as e:
         print(f"Missing key: {e}")
         return {

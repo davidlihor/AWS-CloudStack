@@ -22,12 +22,14 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
   source_code_hash = data.archive_file.lambda_zip[each.key].output_base64sha256
 
   environment {
-    variables = {
+    variables = merge({
       TABLE_NAME = aws_dynamodb_table.cloudstack_table.name
       BUCKET_NAME = module.s3_data.s3_bucket_id
       KMS_KEY_ID = aws_kms_key.cloudfront_signer.arn
       CLOUDFRONT_KEY_ID = aws_cloudfront_public_key.app_key.id
-    }
+    }, each.key == "delete_task" ? {
+      DELETE_QUEUE_URL = aws_sqs_queue.task_deletion_queue.id
+    } : {})
   }
 }
 

@@ -48,7 +48,7 @@ resource "aws_iam_role_policy" "dynamo_access" {
 }
 
 resource "aws_iam_role_policy" "s3_access" {
-  for_each = { for k, v in local.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) }
+  for_each = { for k, v in local.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) || lookup(v, "needs_s3_delete", false) }
   
   name = "S3Access-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
@@ -59,9 +59,28 @@ resource "aws_iam_role_policy" "s3_access" {
       Effect = "Allow"
       Action = compact([
         lookup(each.value, "needs_s3_read", false) ? "s3:GetObject" : null,
-        each.value.needs_s3_write ? "s3:PutObject" : null
+        lookup(each.value, "needs_s3_write", false) ? "s3:PutObject" : null,
+        lookup(each.value, "needs_s3_delete", false) ? "s3:DeleteObject" : null
       ])
       Resource = ["${module.s3_data.s3_bucket_arn}/*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "sqs_send_access" {
+  for_each = { for k, v in local.lambda_configs : k => v if lookup(v, "needs_sqs", false) }
+
+  name = "SQSSendAccess-${each.key}"
+  role = aws_iam_role.lambda_roles[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:SendMessage"
+      ]
+      Resource = aws_sqs_queue.task_deletion_queue.arn
     }]
   })
 }
@@ -101,6 +120,45 @@ resource "aws_iam_role_policy" "step_function_invoke_lambda" {
           aws_lambda_function.cloudstack_lambdas["resizer"].arn,
           "${aws_lambda_function.cloudstack_lambdas["resizer"].arn}:*"
         ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "step_function_cleanup_invoke_lambda" {
+  name = "StepFunctionCleanupInvokeLambdaPolicy"
+  role = aws_iam_role.lambda_roles["cleanup_task"].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "lambda:InvokeFunction"
+        Resource = [
+          aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn,
+          "${aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn}:*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:SendMessage"
+        ]
+        Resource = [
+          aws_sqs_queue.task_deletion_queue.arn,
+          aws_sqs_queue.task_deletion_dlq.arn
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
+          "states:StartExecution"
+        ]
+        Resource = "*"
       }
     ]
   })
