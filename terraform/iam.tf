@@ -24,6 +24,12 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_vpc" {
+  for_each   = aws_iam_role.lambda_roles
+  role       = each.value.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 resource "aws_iam_role_policy" "dynamo_access" {
   for_each = { for k, v in local.lambda_configs : k => v if v.needs_dynamo }
   

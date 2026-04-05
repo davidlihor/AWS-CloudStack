@@ -3,7 +3,7 @@ module "s3_data" {
   version = "5.11.0"
 
   bucket = local.bucket_data
-  force_destroy = !var.production
+  force_destroy = !var.is_production
 
   block_public_acls       = true
   block_public_policy     = true

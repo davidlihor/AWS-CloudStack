@@ -21,6 +21,11 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
   filename         = data.archive_file.lambda_zip[each.key].output_path
   source_code_hash = data.archive_file.lambda_zip[each.key].output_base64sha256
 
+  vpc_config {
+    subnet_ids         = module.vpc.private_subnets
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
   environment {
     variables = merge({
       TABLE_NAME = aws_dynamodb_table.cloudstack_table.name
@@ -31,6 +36,8 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
       DELETE_QUEUE_URL = aws_sqs_queue.task_deletion_queue.id
     } : {})
   }
+
+  depends_on = [module.vpc, aws_iam_role_policy_attachment.lambda_vpc]
 }
 
 resource "aws_lambda_permission" "apigw_lambda" {
