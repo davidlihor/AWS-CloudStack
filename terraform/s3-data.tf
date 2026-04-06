@@ -15,6 +15,16 @@ module "s3_data" {
 
   versioning = { enabled = true }
 
+  lifecycle_rule = [{
+    id      = "intelligent-tiering"
+    enabled = true
+
+    transition = [{
+      days          = 30
+      storage_class = "INTELLIGENT_TIERING"
+    }]
+  }]
+
   cors_rule = [{
     allowed_headers = ["*"]
     allowed_methods = ["PUT", "POST", "GET"]

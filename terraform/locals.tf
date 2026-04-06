@@ -12,6 +12,7 @@ locals {
 
   bucket_name = "cloudstack-project-${random_string.suffix.result}"
   bucket_data = "cloudstack-data-${random_string.suffix.result}"
+  bucket_config = "cloudstack-config-${random_string.suffix.result}"
 
   mime_types = {
     ".html" = "text/html"
