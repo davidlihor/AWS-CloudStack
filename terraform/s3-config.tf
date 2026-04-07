@@ -9,7 +9,7 @@ module "s3_config_logs" {
   object_ownership         = "BucketOwnerPreferred"
 
   attach_policy = true
-  policy        = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -29,10 +29,10 @@ module "s3_config_logs" {
       {
         Sid    = "AllowConfigCheck"
         Effect = "Allow"
-        Principal = { 
+        Principal = {
           Service = "config.amazonaws.com"
         }
-        Action   = [
+        Action = [
           "s3:GetBucketAcl",
           "s3:ListBucket"
         ]

@@ -2,7 +2,7 @@ module "s3_data" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.11.0"
 
-  bucket = local.bucket_data
+  bucket        = local.bucket_data
   force_destroy = !var.is_production
 
   block_public_acls       = true
@@ -48,13 +48,13 @@ resource "aws_s3_bucket_policy" "allow_access_from_cloudfront" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
-        Action    = "s3:GetObject"
-        Resource  = "${module.s3_data.s3_bucket_arn}/*"
+        Action   = "s3:GetObject"
+        Resource = "${module.s3_data.s3_bucket_arn}/*"
         Condition = {
           StringEquals = {
             "AWS:SourceArn" = aws_cloudfront_distribution.s3_distribution.arn

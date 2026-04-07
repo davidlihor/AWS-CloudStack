@@ -73,7 +73,7 @@ resource "aws_iam_role" "remediation_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "ssm.amazonaws.com" 
+          Service = "ssm.amazonaws.com"
         }
       },
     ]
@@ -144,6 +144,6 @@ resource "aws_config_delivery_channel" "main" {
   name           = "main-channel"
   s3_bucket_name = module.s3_config_logs.s3_bucket_id
   sns_topic_arn  = aws_sns_topic.config_updates.arn
-  
-  depends_on     = [aws_config_configuration_recorder.main]
+
+  depends_on = [aws_config_configuration_recorder.main]
 }

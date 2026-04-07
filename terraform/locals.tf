@@ -1,17 +1,17 @@
 locals {
   lambda_configs = {
-    "create_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
-    "get_tasks" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
-    "update_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
-    "delete_task" = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true, needs_sqs = true }
-    "get_upload_url" = { timeout = 3, memory = 128, needs_s3_write = true,  needs_dynamo = true }
-    "resizer"    = { timeout = 30, memory = 1024, needs_s3_read = true, needs_s3_write = true, needs_dynamo = true }
-    "signer"     = { timeout = 3, memory = 128, needs_s3_write = false,  needs_dynamo = false }
-    "cleanup_task" = { timeout = 30, memory = 256, needs_s3_delete = true, needs_dynamo = true }
+    "create_task"    = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "get_tasks"      = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "update_task"    = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true }
+    "delete_task"    = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = true, needs_sqs = true }
+    "get_upload_url" = { timeout = 3, memory = 128, needs_s3_write = true, needs_dynamo = true }
+    "resizer"        = { timeout = 30, memory = 1024, needs_s3_read = true, needs_s3_write = true, needs_dynamo = true }
+    "signer"         = { timeout = 3, memory = 128, needs_s3_write = false, needs_dynamo = false }
+    "cleanup_task"   = { timeout = 30, memory = 256, needs_s3_delete = true, needs_dynamo = true }
   }
 
-  bucket_name = "cloudstack-project-${random_string.suffix.result}"
-  bucket_data = "cloudstack-data-${random_string.suffix.result}"
+  bucket_name   = "cloudstack-project-${random_string.suffix.result}"
+  bucket_data   = "cloudstack-data-${random_string.suffix.result}"
   bucket_config = "cloudstack-config-${random_string.suffix.result}"
 
   mime_types = {
@@ -36,8 +36,8 @@ locals {
   }
 
   cors_resources = {
-    "tasks"  = aws_api_gateway_resource.tasks.id
-    "taskId" = aws_api_gateway_resource.task_id.id
+    "tasks"      = aws_api_gateway_resource.tasks.id
+    "taskId"     = aws_api_gateway_resource.task_id.id
     "upload_url" = aws_api_gateway_resource.upload_url.id
   }
 }

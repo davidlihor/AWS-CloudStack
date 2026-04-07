@@ -10,7 +10,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
         width  = 24
         height = 1
         properties = {
-          markdown = "# AWS Config Compliance Dashboard - ${var.project_name}"
+          markdown   = "# AWS Config Compliance Dashboard - ${var.project_name}"
           background = "transparent"
         }
       },
@@ -92,7 +92,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
         width  = 24
         height = 1
         properties = {
-          markdown = "## Auto-Remediation Status"
+          markdown   = "## Auto-Remediation Status"
           background = "transparent"
         }
       },
@@ -124,7 +124,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
           title  = "Remediation Success Rate (%)"
           region = var.region
           metrics = [
-            [ { expression = "(m1 / (m1 + m2)) * 100", label = "Success Rate", id = "e1" } ],
+            [{ expression = "(m1 / (m1 + m2)) * 100", label = "Success Rate", id = "e1" }],
             ["AWS/Config", "NumberOfRemediationSuccess", { id = "m1", visible = false, stat = "Sum", period = 300 }],
             [".", "NumberOfRemediationFailure", { id = "m2", visible = false, stat = "Sum", period = 300 }]
           ]
@@ -152,7 +152,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
         width  = 24
         height = 1
         properties = {
-          markdown = "## Config Rules Status"
+          markdown   = "## Config Rules Status"
           background = "transparent"
         }
       },
@@ -192,7 +192,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
         width  = 24
         height = 1
         properties = {
-          markdown = "---\n*Last updated: ${timestamp()}* | **${var.project_name}** | Environment: ${var.environment}"
+          markdown   = "---\n*Last updated: ${timestamp()}* | **${var.project_name}** | Environment: ${var.environment}"
           background = "transparent"
         }
       }
@@ -211,7 +211,7 @@ resource "aws_cloudwatch_metric_alarm" "low_compliance" {
   statistic           = "Average"
   threshold           = 80
   alarm_actions       = [aws_sns_topic.config_updates.arn]
-  
+
   tags = {
     Name        = "${var.project_name}-LowComplianceAlarm"
     Project     = var.project_name
@@ -230,7 +230,7 @@ resource "aws_cloudwatch_metric_alarm" "remediation_failures" {
   statistic           = "Sum"
   threshold           = 0
   alarm_actions       = [aws_sns_topic.config_updates.arn]
-  
+
   tags = {
     Name        = "${var.project_name}-RemediationFailureAlarm"
     Project     = var.project_name

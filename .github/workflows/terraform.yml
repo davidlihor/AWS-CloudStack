@@ -5,11 +5,13 @@ on:
       - main
     paths: 
       - terraform/**
+      - .github/workflows/terraform.yml
   pull_request:
     branches:
       - main
     paths: 
       - terraform/**
+      - .github/workflows/terraform.yml
   workflow_dispatch:
   workflow_run:
     workflows: 

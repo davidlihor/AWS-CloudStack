@@ -61,8 +61,8 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
     trusted_key_groups = [aws_cloudfront_key_group.app_key_group.id]
 
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    allowed_methods = ["GET", "HEAD", "OPTIONS"]
+    cached_methods  = ["GET", "HEAD", "OPTIONS"]
 
     forwarded_values {
       query_string = true
@@ -200,8 +200,8 @@ EOF
 }
 
 resource "aws_cloudfront_key_group" "app_key_group" {
-  name    = "app-key-group"
-  items   = [aws_cloudfront_public_key.app_key.id]
+  name  = "app-key-group"
+  items = [aws_cloudfront_public_key.app_key.id]
 
   lifecycle {
     ignore_changes = [items]

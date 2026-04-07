@@ -5,8 +5,8 @@ resource "aws_iam_role" "lambda_roles" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
       Principal = {
         Service = [
           "lambda.amazonaws.com",
@@ -32,7 +32,7 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
 
 resource "aws_iam_role_policy" "dynamo_access" {
   for_each = { for k, v in local.lambda_configs : k => v if v.needs_dynamo }
-  
+
   name = "DynamoAccess-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
 
@@ -55,7 +55,7 @@ resource "aws_iam_role_policy" "dynamo_access" {
 
 resource "aws_iam_role_policy" "s3_access" {
   for_each = { for k, v in local.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) || lookup(v, "needs_s3_delete", false) }
-  
+
   name = "S3Access-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
 
@@ -120,8 +120,8 @@ resource "aws_iam_role_policy" "step_function_invoke_lambda" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = "lambda:InvokeFunction"
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
         Resource = [
           aws_lambda_function.cloudstack_lambdas["resizer"].arn,
           "${aws_lambda_function.cloudstack_lambdas["resizer"].arn}:*"
@@ -139,16 +139,16 @@ resource "aws_iam_role_policy" "step_function_cleanup_invoke_lambda" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = "lambda:InvokeFunction"
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
         Resource = [
           aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn,
           "${aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn}:*"
         ]
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
@@ -160,8 +160,8 @@ resource "aws_iam_role_policy" "step_function_cleanup_invoke_lambda" {
         ]
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "states:StartExecution"
         ]
         Resource = "*"

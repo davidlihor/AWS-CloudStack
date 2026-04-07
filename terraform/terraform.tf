@@ -15,4 +15,10 @@ terraform {
       version = "2.7.1"
     }
   }
+
+  backend "s3" {
+    key          = "terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
+  }
 }

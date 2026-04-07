@@ -41,7 +41,7 @@ output "cloudfront_domain_name" {
 }
 
 output "waf_web_acl_id" {
-  value       =  aws_wafv2_web_acl.cloudfront_waf.id
+  value       = aws_wafv2_web_acl.cloudfront_waf.id
   description = "WAF Web ACL ID"
 }
 
