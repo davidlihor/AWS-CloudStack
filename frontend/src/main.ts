@@ -1,9 +1,20 @@
 class CloudTaskApp {
+    tasks: any[];
+    currentFilter: string;
+    pendingDeleteTaskId: string | null;
+    uploadingTaskId: string | null;
+    taskBlobs: Map<string, string>;
+    signedCookies: boolean | null;
+    cloudFrontDomain: string | null;
+
     constructor() {
         this.tasks = [];
         this.currentFilter = 'all';
         this.pendingDeleteTaskId = null;
         this.uploadingTaskId = null;
+        this.taskBlobs = new Map();
+        this.signedCookies = null;
+        this.cloudFrontDomain = null;
         this.init();
     }
 
@@ -38,6 +49,12 @@ class CloudTaskApp {
         document.getElementById('delete-modal')?.addEventListener('click', (e) => {
             if (e.target.id === 'delete-modal') this.hideDeleteModal();
         });
+
+        // Image modal events
+        document.getElementById('image-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'image-modal') this.hideImageModal();
+        });
+        document.getElementById('close-image-modal')?.addEventListener('click', () => this.hideImageModal());
     }
 
     showPage(pageId) {
@@ -183,8 +200,9 @@ class CloudTaskApp {
         this.showPage('app-page');
         document.getElementById('user-email').textContent = auth.getCurrentUserEmail();
         
-        this.showLoading();
         try {
+            await this.getSignedCookies();
+            
             await this.loadTasks();
         } catch (error) {
             console.error('Error loading tasks:', error);
@@ -332,7 +350,9 @@ class CloudTaskApp {
                     xhr.send(file);
                 });
 
-                // Upload complete - progress bar will show 100%
+                const blobUrl = URL.createObjectURL(file);
+                this.taskBlobs.set(taskId, blobUrl);
+
                 const progressBar = document.querySelector(`li[data-task-id="${taskId}"] .progress-fill`);
                 if (progressBar) {
                     progressBar.style.width = '100%';
@@ -402,6 +422,33 @@ class CloudTaskApp {
 
             const isUploading = this.uploadingTaskId === taskId;
             const isAnotherUploading = this.uploadingTaskId && this.uploadingTaskId !== taskId;
+            
+            const blobUrl = this.taskBlobs.get(taskId);
+            const hasImage = blobUrl || task.hasImage === true;
+            
+            let imageHtml = '';
+            if (isUploading) {
+                imageHtml = `
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                `;
+            } else if (blobUrl) {
+                imageHtml = `
+                    <div class="task-thumbnail" onclick="app.handleThumbnailClick('${taskId}', true)">
+                        <img src="${blobUrl}" alt="Uploaded image" />
+                    </div>
+                `;
+            } else if (task.hasImage === true) {
+                const userId = auth.getCurrentUserId();
+                const cfDomain = window.AWS_CONFIG.cloudFrontDomain;
+                const thumbUrl = `https://${cfDomain}/users/${userId}/${taskId}/thumbnail.png`;
+                imageHtml = `
+                    <div class="task-thumbnail" onclick="app.handleThumbnailClick('${taskId}', false)">
+                        <img src="${thumbUrl}" alt="Task image" loading="lazy" crossorigin="use-credentials" onerror="this.style.display='none'; this.parentElement.style.display='none'" />
+                    </div>
+                `;
+            }
 
             return `
                 <li class="task-item ${task.completed ? 'completed' : ''} ${isUploading ? 'uploading' : ''}" data-task-id="${taskId}">
@@ -434,15 +481,73 @@ class CloudTaskApp {
                                 </button>
                             </div>
                         </div>
-                        ${isUploading ? `
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 0%"></div>
-                            </div>
-                        ` : ''}
+                        ${imageHtml}
                     </div>
                 </li>
             `;
         }).join('');
+    }
+
+    async handleThumbnailClick(taskId, isBlob) {
+        if (isBlob) {
+            const blobUrl = this.taskBlobs.get(taskId);
+            if (blobUrl) {
+                this.showImageModal(blobUrl);
+            }
+        } else {
+            const fullImageUrl = await this.loadCloudFrontImage(taskId, false);
+            if (fullImageUrl) {
+                this.showImageModal(fullImageUrl);
+            }
+        }
+    }
+
+    hideImageModal() {
+        document.getElementById('image-modal')?.classList.remove('show');
+        const img = document.getElementById('modal-image');
+        if (img) img.src = '';
+    }
+
+    showImageModal(src) {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('modal-image');
+        if (modal && img) {
+            img.src = src;
+            modal.classList.add('show');
+        }
+    }
+
+    async getSignedCookies() {
+        if (this.signedCookies) return this.signedCookies;
+        
+        try {
+            const cfDomain = window.AWS_CONFIG.cloudFrontDomain || window.AWS_CONFIG.apiEndpoint.replace('https://', '').replace('http://', '');
+            const response = await fetch(`${window.AWS_CONFIG.apiEndpoint}/get-access`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${auth.getIdToken()}`,
+                    'X-CloudFront-Domain': cfDomain
+                },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) throw new Error('Failed to get signed cookies');
+            
+            this.signedCookies = true;
+            return true;
+        } catch (error) {
+            console.error('Error getting signed cookies:', error);
+            return false;
+        }
+    }
+
+    async loadCloudFrontImage(taskId, isThumbnail = false) {
+        const hasCookies = await this.getSignedCookies();
+        if (!hasCookies) return null;
+        
+        const imageName = isThumbnail ? 'thumbnail.png' : 'photo.png';
+        const userId = auth.getCurrentUserId();
+        return `https://${window.AWS_CONFIG.cloudFrontDomain}/users/${userId}/${taskId}/${imageName}`;
     }
 
     escapeHtml(text) {

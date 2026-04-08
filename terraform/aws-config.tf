@@ -17,6 +17,8 @@ resource "aws_config_config_rule" "ebs_optimized_check" {
     owner             = "AWS"
     source_identifier = "ENCRYPTED_VOLUMES"
   }
+
+  depends_on = [aws_config_configuration_recorder_status.main]
 }
 
 resource "aws_config_remediation_configuration" "ebs_remediation" {
@@ -39,6 +41,8 @@ resource "aws_config_config_rule" "ssh_restricted" {
     owner             = "AWS"
     source_identifier = "INCOMING_SSH_DISABLED"
   }
+
+  depends_on = [aws_config_configuration_recorder_status.main]
 }
 
 resource "aws_config_remediation_configuration" "ssh_remediation" {

@@ -8,3 +8,13 @@ data "aws_kms_public_key" "pub" {
   key_id = aws_kms_key.cloudfront_signer.id
 }
 
+resource "aws_kms_key" "backup_key" {
+  description             = "KMS Key for encrypting DynamoDB backups"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "backup_key_alias" {
+  name          = "alias/${var.project_name}-backup-key"
+  target_key_id = aws_kms_key.backup_key.key_id
+}

@@ -21,3 +21,15 @@ variable "is_production" {
   type        = bool
   default     = true
 }
+
+variable "monthly_budget_limit" {
+  description = "Monthly budget limit in USD for cost alerts"
+  type        = number
+  default     = 100
+}
+
+variable "budget_alert_emails" {
+  description = "List of email addresses to receive budget alerts"
+  type        = list(string)
+  default     = ["mail@example.com"]
+}

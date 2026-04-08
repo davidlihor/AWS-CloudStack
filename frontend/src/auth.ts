@@ -119,6 +119,18 @@ class Auth {
         return localStorage.getItem('userEmail');
     }
 
+    getCurrentUserId() {
+        const idToken = localStorage.getItem('idToken');
+        if (!idToken) return null;
+        
+        try {
+            const payload = JSON.parse(atob(idToken.split('.')[1]));
+            return payload.sub;
+        } catch (e) {
+            return null;
+        }
+    }
+
     getIdToken() {
         return localStorage.getItem('idToken');
     }
