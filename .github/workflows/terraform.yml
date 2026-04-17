@@ -116,7 +116,7 @@ jobs:
     needs: 
       - validate
       - security-scan
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
