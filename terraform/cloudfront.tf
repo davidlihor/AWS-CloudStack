@@ -96,58 +96,14 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 
   ordered_cache_behavior {
-    path_pattern     = "/tasks*"
+    path_pattern     = "/api/*"
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
     target_origin_id = "API-Gateway-Origin"
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Accept", "Content-Type"]
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "https-only"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
-    compress               = true
-  }
-
-  ordered_cache_behavior {
-    path_pattern     = "/upload-url*"
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD", "OPTIONS"]
-    target_origin_id = "API-Gateway-Origin"
-
-    forwarded_values {
-      query_string = true
-      headers      = ["Authorization", "Accept", "Content-Type", "Origin"]
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "https-only"
-    min_ttl                = 0
-    default_ttl            = 0
-    max_ttl                = 0
-    compress               = true
-  }
-
-  ordered_cache_behavior {
-    path_pattern     = "/get-access*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "API-Gateway-Origin"
-
-    forwarded_values {
-      query_string = false
-      headers      = ["Authorization", "X-CloudFront-Domain"]
+      headers      = ["Authorization", "Accept", "Content-Type", "Origin", "X-CloudFront-Domain"]
 
       cookies {
         forward = "all"
@@ -163,14 +119,14 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   custom_error_response {
     error_code         = 404
-    response_code      = 404
-    response_page_path = "/404.html"
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
   custom_error_response {
     error_code         = 403
-    response_code      = 404
-    response_page_path = "/404.html"
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
   restrictions {

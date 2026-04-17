@@ -240,3 +240,42 @@ resource "aws_iam_role_policy" "ssm_secrets_access" {
     ]
   })
 }
+
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  name = "CloudStack-APIGateway-CloudWatchLogs"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "apigateway.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
+  name = "APIGatewayCloudWatchPolicy"
+  role = aws_iam_role.api_gateway_cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_api_gateway_account" "api_gateway_cloudwatch" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+}

@@ -10,9 +10,15 @@ resource "aws_api_gateway_authorizer" "cognito_auth" {
   identity_source = "method.request.header.Authorization"
 }
 
-resource "aws_api_gateway_resource" "tasks" {
+resource "aws_api_gateway_resource" "api" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  path_part   = "api"
+}
+
+resource "aws_api_gateway_resource" "tasks" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.api.id
   path_part   = "tasks"
 }
 
@@ -63,6 +69,26 @@ resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.prod.id
   rest_api_id   = aws_api_gateway_rest_api.api.id
   stage_name    = "prod"
+
+  depends_on = [aws_api_gateway_account.api_gateway_cloudwatch]
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+    })
+  }
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway" {
+  name              = "/aws/apigateway/${var.project_name}"
+  retention_in_days = 30
 }
 
 resource "aws_api_gateway_method" "options" {
@@ -111,7 +137,7 @@ resource "aws_api_gateway_integration_response" "options_int_resp" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers"     = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods"     = "'DELETE,GET,OPTIONS,POST,PUT'"
-    "method.response.header.Access-Control-Allow-Origin"      = "'*'"
+    "method.response.header.Access-Control-Allow-Origin"      = var.domain_name != null ? "'https://${var.domain_name}'" : "'https://${aws_cloudfront_distribution.s3_distribution.domain_name}'"
     "method.response.header.Access-Control-Expose-Headers"    = "'Set-Cookie'"
     "method.response.header.Access-Control-Allow-Credentials" = "'true'"
   }
@@ -119,12 +145,12 @@ resource "aws_api_gateway_integration_response" "options_int_resp" {
 
 resource "aws_api_gateway_resource" "upload_url" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  parent_id   = aws_api_gateway_resource.api.id
   path_part   = "upload-url"
 }
 
 resource "aws_api_gateway_resource" "get_access" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
+  parent_id   = aws_api_gateway_resource.api.id
   path_part   = "get-access"
 }

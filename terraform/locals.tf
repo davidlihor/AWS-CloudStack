@@ -38,9 +38,11 @@ locals {
   }
 
   cors_resources = {
+    "api"        = aws_api_gateway_resource.api.id
     "tasks"      = aws_api_gateway_resource.tasks.id
     "taskId"     = aws_api_gateway_resource.task_id.id
     "upload_url" = aws_api_gateway_resource.upload_url.id
+    "get_access" = aws_api_gateway_resource.get_access.id
   }
 }
 

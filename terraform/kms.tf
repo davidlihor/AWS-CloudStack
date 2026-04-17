@@ -20,3 +20,18 @@ resource "aws_kms_alias" "backup_key_alias" {
   name          = "alias/${var.project_name}-backup-key"
   target_key_id = aws_kms_key.backup_key[0].key_id
 }
+
+resource "aws_kms_key" "secrets" {
+  description             = "KMS key for Secrets Manager encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "${var.project_name}-secrets-key"
+  }
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.project_name}-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}

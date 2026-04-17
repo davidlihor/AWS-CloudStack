@@ -54,19 +54,19 @@ resource "aws_s3_object" "config_js" {
   key          = "config.js"
   content_type = "application/javascript"
 
-  content = templatefile("${path.module}/../frontend/config.js", {
+  content = templatefile("${path.module}/../frontend/dist/config.js", {
     user_pool_id      = aws_cognito_user_pool.pool.id
     client_id         = aws_cognito_user_pool_client.client.id
-    api_url           = var.domain_name != null ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    api_url           = ""
     cloudfront_domain = var.domain_name != null ? var.domain_name : aws_cloudfront_distribution.s3_distribution.domain_name
     region            = var.region
   })
 
-  etag = md5(templatefile("${path.module}/../frontend/config.js", {
+  etag = md5(templatefile("${path.module}/../frontend/dist/config.js", {
     user_pool_id      = aws_cognito_user_pool.pool.id
     client_id         = aws_cognito_user_pool_client.client.id
     region            = var.region
-    api_url           = var.domain_name != null ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    api_url           = ""
     cloudfront_domain = var.domain_name != null ? var.domain_name : aws_cloudfront_distribution.s3_distribution.domain_name
   }))
 

@@ -55,6 +55,13 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
   depends_on = [module.vpc, aws_iam_role_policy_attachment.lambda_vpc]
 }
 
+resource "aws_cloudwatch_log_group" "lambda" {
+  for_each = local.lambda_configs
+
+  name              = "/aws/lambda/CloudStack-${each.key}"
+  retention_in_days = 30
+}
+
 resource "aws_lambda_permission" "apigw_lambda" {
   for_each = { for k, v in aws_lambda_function.cloudstack_lambdas : k => v if k != "resizer" }
 

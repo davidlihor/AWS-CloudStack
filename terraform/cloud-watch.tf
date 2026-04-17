@@ -192,7 +192,7 @@ resource "aws_cloudwatch_dashboard" "compliance" {
         width  = 24
         height = 1
         properties = {
-          markdown   = "---\n*Last updated: ${timestamp()}* | **${var.project_name}** | Environment: ${var.environment}"
+          markdown   = "---\n**${var.project_name}** | Environment: ${var.environment}"
           background = "transparent"
         }
       }
