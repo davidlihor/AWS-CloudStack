@@ -38,6 +38,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v5
 
+      - name: Download frontend build
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: frontend.yml
+          workflow_conclusion: success
+          name: frontend-dist
+          path: frontend/dist
+          if_no_artifact_found: warn
+
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -171,8 +180,10 @@ jobs:
     name: Terraform Deploy
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
+    environment: production
     needs: 
       - security-scan
+      - plan
     steps:
       - name: Check out code
         uses: actions/checkout@v5
