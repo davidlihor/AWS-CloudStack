@@ -3,10 +3,10 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   aliases = var.domain_name != null ? [var.domain_name] : []
 
   viewer_certificate {
-    cloudfront_default_certificate = var.domain_name == null
-    acm_certificate_arn            = var.domain_name != null ? aws_acm_certificate_validation.cert[0].certificate_arn : null
-    ssl_support_method             = var.domain_name != null ? "sni-only" : null
-    minimum_protocol_version       = var.domain_name != null ? "TLSv1.2_2021" : "TLSv1"
+    cloudfront_default_certificate = var.acm_certificate_arn == null
+    acm_certificate_arn            = var.acm_certificate_arn
+    ssl_support_method             = var.acm_certificate_arn != null ? "sni-only" : null
+    minimum_protocol_version       = var.acm_certificate_arn != null ? "TLSv1.2_2021" : "TLSv1"
   }
 
   origin {
@@ -22,13 +22,13 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 
   origin {
-    domain_name              = module.s3_data.s3_bucket_bucket_regional_domain_name
+    domain_name              = var.s3_data_bucket_regional_domain_name
     origin_id                = "S3-Data-Origin"
-    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+    origin_access_control_id = var.cloudfront_origin_access_control_id
   }
 
   origin {
-    domain_name = replace(aws_api_gateway_stage.prod.invoke_url, "/^https?://([^/]*).*/", "$1")
+    domain_name = replace(var.api_gateway_stage_invoke_url, "/^https?://([^/]*).*/", "$1")
     origin_id   = "API-Gateway-Origin"
 
     custom_origin_config {
@@ -44,7 +44,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  web_acl_id          = aws_wafv2_web_acl.cloudfront_waf.arn
+  web_acl_id          = var.waf_acl_arn
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
@@ -143,7 +143,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 resource "null_resource" "cloudfront_invalidation" {
   triggers = {
     frontend_hash = sha256(join("", [
-      for f in fileset("${path.module}/../frontend/dist", "**") : filemd5("${path.module}/../frontend/dist/${f}")
+      for f in fileset("${path.module}/../../frontend/dist", "**") : filemd5("${path.module}/../../frontend/dist/${f}")
     ]))
     config_hash = md5(aws_s3_object.config_js.content)
   }

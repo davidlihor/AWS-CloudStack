@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_roles" {
-  for_each = local.lambda_configs
+  for_each = var.lambda_configs
   name     = "CloudStack-Role-${each.key}"
 
   assume_role_policy = jsonencode({
@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
 }
 
 resource "aws_iam_role_policy" "dynamo_access" {
-  for_each = { for k, v in local.lambda_configs : k => v if v.needs_dynamo }
+  for_each = { for k, v in var.lambda_configs : k => v if v.needs_dynamo }
 
   name = "DynamoAccess-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
@@ -48,13 +48,13 @@ resource "aws_iam_role_policy" "dynamo_access" {
         "dynamodb:Query",
         "dynamodb:Scan"
       ]
-      Resource = aws_dynamodb_table.cloudstack_table.arn
+      Resource = var.dynamodb_table_arn
     }]
   })
 }
 
 resource "aws_iam_role_policy" "s3_access" {
-  for_each = { for k, v in local.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) || lookup(v, "needs_s3_delete", false) }
+  for_each = { for k, v in var.lambda_configs : k => v if v.needs_s3_write || lookup(v, "needs_s3_read", false) || lookup(v, "needs_s3_delete", false) }
 
   name = "S3Access-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
@@ -68,13 +68,13 @@ resource "aws_iam_role_policy" "s3_access" {
         lookup(each.value, "needs_s3_write", false) ? "s3:PutObject" : null,
         lookup(each.value, "needs_s3_delete", false) ? "s3:DeleteObject" : null
       ])
-      Resource = ["${module.s3_data.s3_bucket_arn}/*"]
+      Resource = ["${var.s3_data_bucket_arn}/*"]
     }]
   })
 }
 
 resource "aws_iam_role_policy" "sqs_send_access" {
-  for_each = { for k, v in local.lambda_configs : k => v if lookup(v, "needs_sqs", false) }
+  for_each = { for k, v in var.lambda_configs : k => v if lookup(v, "needs_sqs", false) }
 
   name = "SQSSendAccess-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
@@ -86,7 +86,7 @@ resource "aws_iam_role_policy" "sqs_send_access" {
       Action = [
         "sqs:SendMessage"
       ]
-      Resource = aws_sqs_queue.task_deletion_queue.arn
+      Resource = var.sqs_queue_arns.task_deletion_queue_arn
     }]
   })
 }
@@ -123,8 +123,8 @@ resource "aws_iam_role_policy" "step_function_invoke_lambda" {
         Effect = "Allow"
         Action = "lambda:InvokeFunction"
         Resource = [
-          aws_lambda_function.cloudstack_lambdas["resizer"].arn,
-          "${aws_lambda_function.cloudstack_lambdas["resizer"].arn}:*"
+          var.lambda_function_arns["resizer"],
+          "${var.lambda_function_arns["resizer"]}:*"
         ]
       }
     ]
@@ -142,8 +142,8 @@ resource "aws_iam_role_policy" "step_function_cleanup_invoke_lambda" {
         Effect = "Allow"
         Action = "lambda:InvokeFunction"
         Resource = [
-          aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn,
-          "${aws_lambda_function.cloudstack_lambdas["cleanup_task"].arn}:*"
+          var.lambda_function_arns["cleanup_task"],
+          "${var.lambda_function_arns["cleanup_task"]}:*"
         ]
       },
       {
@@ -155,8 +155,8 @@ resource "aws_iam_role_policy" "step_function_cleanup_invoke_lambda" {
           "sqs:SendMessage"
         ]
         Resource = [
-          aws_sqs_queue.task_deletion_queue.arn,
-          aws_sqs_queue.task_deletion_dlq.arn
+          var.sqs_queue_arns.task_deletion_queue_arn,
+          var.sqs_queue_arns.task_deletion_dlq_arn
         ]
       },
       {
@@ -187,7 +187,7 @@ resource "aws_iam_role_policy" "lambda_kms_policy" {
 }
 
 resource "aws_iam_role_policy" "ssm_secrets_access" {
-  for_each = local.lambda_configs
+  for_each = var.lambda_configs
 
   name = "SSMSecretsAccess-${each.key}"
   role = aws_iam_role.lambda_roles[each.key].id
@@ -210,7 +210,7 @@ resource "aws_iam_role_policy" "ssm_secrets_access" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          aws_secretsmanager_secret.cloudfront_key_id.arn
+          var.cloudfront_secret_arn
         ]
       },
       {

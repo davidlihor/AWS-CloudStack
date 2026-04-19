@@ -2,7 +2,7 @@ module "s3_config_logs" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.11.0"
 
-  bucket        = local.bucket_config
+  bucket        = var.bucket_config_name
   force_destroy = !var.is_production
 
   control_object_ownership = true
@@ -19,7 +19,7 @@ module "s3_config_logs" {
           Service = "config.amazonaws.com"
         }
         Action   = "s3:PutObject"
-        Resource = "arn:aws:s3:::${local.bucket_config}/AWSLogs/*"
+        Resource = "arn:aws:s3:::${var.bucket_config_name}/AWSLogs/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -36,7 +36,7 @@ module "s3_config_logs" {
           "s3:GetBucketAcl",
           "s3:ListBucket"
         ]
-        Resource = "arn:aws:s3:::${local.bucket_config}"
+        Resource = "arn:aws:s3:::${var.bucket_config_name}"
       }
     ]
   })

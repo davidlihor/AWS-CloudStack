@@ -2,7 +2,7 @@ module "s3_data" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.11.0"
 
-  bucket        = local.bucket_data
+  bucket        = var.bucket_data
   force_destroy = !var.is_production
 
   block_public_acls       = true
@@ -57,7 +57,7 @@ resource "aws_s3_bucket_policy" "allow_access_from_cloudfront" {
         Resource = "${module.s3_data.s3_bucket_arn}/*"
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.s3_distribution.arn
+            "AWS:SourceArn" = var.cloudfront_distribution_arn
           }
         }
       }

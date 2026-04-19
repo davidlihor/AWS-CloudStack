@@ -139,7 +139,6 @@ resource "aws_iam_policy" "sg_remediation_policy" {
   })
 }
 
-
 resource "aws_sns_topic" "config_updates" {
   name = "config-compliance-updates"
 }

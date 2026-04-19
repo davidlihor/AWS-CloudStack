@@ -1,12 +1,12 @@
 resource "aws_api_gateway_rest_api" "api" {
-  name = "CloudStackAPI"
+  name = "${var.project_name}-API"
 }
 
 resource "aws_api_gateway_authorizer" "cognito_auth" {
   name            = "CognitoAuthorizer"
   type            = "COGNITO_USER_POOLS"
   rest_api_id     = aws_api_gateway_rest_api.api.id
-  provider_arns   = [aws_cognito_user_pool.pool.arn]
+  provider_arns   = [var.user_pool_arn]
   identity_source = "method.request.header.Authorization"
 }
 
@@ -69,8 +69,6 @@ resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.prod.id
   rest_api_id   = aws_api_gateway_rest_api.api.id
   stage_name    = "prod"
-
-  depends_on = [aws_api_gateway_account.api_gateway_cloudwatch]
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway.arn
@@ -137,7 +135,7 @@ resource "aws_api_gateway_integration_response" "options_int_resp" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers"     = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods"     = "'DELETE,GET,OPTIONS,POST,PUT'"
-    "method.response.header.Access-Control-Allow-Origin"      = var.domain_name != null ? "'https://${var.domain_name}'" : "'https://${aws_cloudfront_distribution.s3_distribution.domain_name}'"
+    "method.response.header.Access-Control-Allow-Origin"      = var.domain_name != null ? "'https://${var.domain_name}'" : "'https://${var.cloudfront_domain_name}'"
     "method.response.header.Access-Control-Expose-Headers"    = "'Set-Cookie'"
     "method.response.header.Access-Control-Allow-Credentials" = "'true'"
   }

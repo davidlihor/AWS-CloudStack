@@ -1,6 +1,6 @@
 resource "aws_sfn_state_machine" "image_processor_sfn" {
   name     = "ImageProcessingWorkflow"
-  role_arn = aws_iam_role.lambda_roles["resizer"].arn
+  role_arn = var.lambda_role_arns["resizer"]
 
   definition = jsonencode({
     StartAt = "ResizeImage",
@@ -16,7 +16,7 @@ resource "aws_sfn_state_machine" "image_processor_sfn" {
 
 resource "aws_sfn_state_machine" "task_cleanup_sfn" {
   name     = "TaskCleanupWorkflow"
-  role_arn = aws_iam_role.lambda_roles["cleanup_task"].arn
+  role_arn = var.lambda_role_arns["cleanup_task"]
 
   definition = jsonencode({
     Comment = "Enterprise Task Cleanup with Parallel Execution and Error Handling",

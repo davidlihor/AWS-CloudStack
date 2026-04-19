@@ -6,7 +6,7 @@ resource "aws_cloudwatch_event_rule" "s3_upload_rule" {
     "source" : ["aws.s3"],
     "detail-type" : ["Object Created"],
     "detail" : {
-      "bucket" : { "name" : ["${module.s3_data.s3_bucket_id}"] },
+      "bucket" : { "name" : ["${var.s3_data_bucket_id}"] },
       "object" : { "key" : [{ "suffix" : "photo.png" }] }
     }
   })

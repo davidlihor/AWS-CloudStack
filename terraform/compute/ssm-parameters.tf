@@ -1,7 +1,7 @@
 resource "aws_ssm_parameter" "table_name" {
   name  = "/${var.project_name}/${var.environment}/dynamodb/table-name"
   type  = "String"
-  value = aws_dynamodb_table.cloudstack_table.name
+  value = var.dynamodb_table_name
   tier  = "Standard"
 
   tags = {
@@ -12,21 +12,19 @@ resource "aws_ssm_parameter" "table_name" {
 resource "aws_ssm_parameter" "bucket_name" {
   name  = "/${var.project_name}/${var.environment}/s3/data-bucket"
   type  = "String"
-  value = module.s3_data.s3_bucket_id
+  value = var.s3_data_bucket_id
   tier  = "Standard"
 
   tags = {
     Name = "S3 Data Bucket"
   }
-
-  depends_on = [module.s3_data]
 }
 
 resource "aws_ssm_parameter" "kms_key_id" {
   name   = "/${var.project_name}/${var.environment}/kms/cloudfront-signer-arn"
   type   = "SecureString"
-  value  = aws_kms_key.cloudfront_signer.arn
-  key_id = aws_kms_key.secrets.arn
+  value  = var.kms_key_cloudfront_signer_arn
+  key_id = var.kms_key_secrets_arn
   tier   = "Standard"
 
   tags = {

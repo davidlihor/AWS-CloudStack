@@ -22,7 +22,7 @@ resource "aws_sqs_queue" "image_processing_queue" {
 
 resource "aws_pipes_pipe" "sqs_to_sfn_cleanup" {
   name     = "sqs-to-sfn-cleanup-pipe"
-  role_arn = aws_iam_role.lambda_roles["cleanup_task"].arn
+  role_arn = var.lambda_role_arns["cleanup_task"]
 
   source = aws_sqs_queue.task_deletion_queue.arn
   target = aws_sfn_state_machine.task_cleanup_sfn.arn
@@ -32,11 +32,13 @@ resource "aws_pipes_pipe" "sqs_to_sfn_cleanup" {
       invocation_type = "FIRE_AND_FORGET"
     }
   }
+
+  depends_on = [aws_sqs_queue_policy.allow_pipes_cleanup]
 }
 
 resource "aws_pipes_pipe" "sqs_to_sfn" {
   name     = "sqs-to-sfn-pipe"
-  role_arn = aws_iam_role.lambda_roles["resizer"].arn
+  role_arn = var.lambda_role_arns["resizer"]
 
   source = aws_sqs_queue.image_processing_queue.arn
   target = aws_sfn_state_machine.image_processor_sfn.arn
@@ -46,22 +48,59 @@ resource "aws_pipes_pipe" "sqs_to_sfn" {
       invocation_type = "FIRE_AND_FORGET"
     }
   }
+
+  depends_on = [aws_sqs_queue_policy.allow_eventbridge]
 }
 
 resource "aws_sqs_queue_policy" "allow_eventbridge" {
   queue_url = aws_sqs_queue.image_processing_queue.id
   policy = jsonencode({
     Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowEventBridgeSendMessage"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sqs:SendMessage"
+        Resource = aws_sqs_queue.image_processing_queue.arn
+        Condition = {
+          ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.s3_upload_rule.arn }
+        }
+      },
+      {
+        Sid    = "AllowPipesAccess"
+        Effect = "Allow"
+        Principal = {
+          Service = "pipes.amazonaws.com"
+        }
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.image_processing_queue.arn
+      }
+    ]
+  })
+}
+
+resource "aws_sqs_queue_policy" "allow_pipes_cleanup" {
+  queue_url = aws_sqs_queue.task_deletion_queue.id
+  policy = jsonencode({
+    Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Service = "events.amazonaws.com"
+        Service = "pipes.amazonaws.com"
       }
-      Action   = "sqs:SendMessage"
-      Resource = aws_sqs_queue.image_processing_queue.arn
-      Condition = {
-        ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.s3_upload_rule.arn }
-      }
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = aws_sqs_queue.task_deletion_queue.arn
     }]
   })
 }

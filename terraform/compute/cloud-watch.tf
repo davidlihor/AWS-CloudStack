@@ -210,7 +210,7 @@ resource "aws_cloudwatch_metric_alarm" "low_compliance" {
   period              = 300
   statistic           = "Average"
   threshold           = 80
-  alarm_actions       = [aws_sns_topic.config_updates.arn]
+  alarm_actions       = [var.sns_topic_arn]
 
   tags = {
     Name = "${var.project_name}-LowComplianceAlarm"
@@ -227,7 +227,7 @@ resource "aws_cloudwatch_metric_alarm" "remediation_failures" {
   period              = 300
   statistic           = "Sum"
   threshold           = 0
-  alarm_actions       = [aws_sns_topic.config_updates.arn]
+  alarm_actions       = [var.sns_topic_arn]
 
   tags = {
     Name = "${var.project_name}-RemediationFailureAlarm"

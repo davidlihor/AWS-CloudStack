@@ -1,20 +1,20 @@
 data "archive_file" "lambda_zip" {
-  for_each    = local.lambda_configs
+  for_each    = var.lambda_configs
   type        = "zip"
-  source_dir  = "${path.module}/../lambda-functions"
-  output_path = "${path.module}/files/${each.key}.zip"
+  source_dir  = "${path.module}/../../lambda-functions"
+  output_path = "${path.module}/../files/${each.key}.zip"
 
   excludes = setsubtract(
-    fileset("${path.module}/../lambda-functions", "*.py"),
+    fileset("${path.module}/../../lambda-functions", "*.py"),
     ["${each.key}.py", "config_helper.py"]
   )
 }
 
 resource "aws_lambda_function" "cloudstack_lambdas" {
-  for_each = local.lambda_configs
+  for_each = var.lambda_configs
 
-  function_name = "CloudStack-${each.key}"
-  role          = aws_iam_role.lambda_roles[each.key].arn
+  function_name = "${var.project_name}-${each.key}"
+  role          = var.lambda_role_arns[each.key]
   handler       = "${each.key}.lambda_handler"
   runtime       = "python3.12"
   architectures = ["x86_64"]
@@ -26,15 +26,15 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
 
   layers = compact([
     local.secrets_extension_arn,
-    each.key == "resizer" ? "arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-Pillow:10" : null
+    each.key == "resizer" ? local.resizer_layer_arn : null
   ])
 
   filename         = data.archive_file.lambda_zip[each.key].output_path
   source_code_hash = data.archive_file.lambda_zip[each.key].output_base64sha256
 
   vpc_config {
-    subnet_ids         = module.vpc.private_subnets
-    security_group_ids = [aws_security_group.lambda.id]
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [var.lambda_sg_id]
   }
 
   environment {
@@ -46,17 +46,16 @@ resource "aws_lambda_function" "cloudstack_lambdas" {
       PARAMETERS_SECRETS_EXTENSION_LOG_LEVEL     = "INFO"
 
       SSM_PARAMETER_PREFIX  = "/${var.project_name}/${var.environment}"
-      SECRET_ARN_CLOUDFRONT = aws_secretsmanager_secret.cloudfront_key_id.arn
+      SECRET_ARN_CLOUDFRONT = var.cloudfront_secret_arn
+      BUCKET_NAME           = var.s3_data_bucket_id
       }, each.key == "delete_task" ? {
       DELETE_QUEUE_URL_PARAM = "/${var.project_name}/${var.environment}/sqs/delete-queue-url"
     } : {})
   }
-
-  depends_on = [module.vpc, aws_iam_role_policy_attachment.lambda_vpc]
 }
 
 resource "aws_cloudwatch_log_group" "lambda" {
-  for_each = local.lambda_configs
+  for_each = var.lambda_configs
 
   name              = "/aws/lambda/CloudStack-${each.key}"
   retention_in_days = 30
