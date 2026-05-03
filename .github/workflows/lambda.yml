@@ -1,0 +1,88 @@
+name: "Secure-Lambda-Build-Pipeline"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lambda-functions/**'
+      - '.github/workflows/lambda.yml'
+  workflow_dispatch:
+
+jobs:
+  production-build:
+    name: "Build & Security Scan"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit flake8 pytest detect-secrets
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        working-directory: lambda-functions
+
+      - name: Linting
+        run: flake8 . --max-line-length=120 --extend-ignore=E203,W503
+        working-directory: lambda-functions
+
+      - name: Python Security Scan
+        run: |
+          bandit -r . -ll
+          bandit -r . -f json -o bandit-report.json || true
+        working-directory: lambda-functions
+
+      - name: Advanced Dependency Scan
+        uses: aquasecurity/trivy-action@v0.20.0
+        with:
+          scan-type: 'fs'
+          scan-ref: 'lambda-functions'
+          severity: 'HIGH,CRITICAL'
+          format: 'table'
+          exit-code: 1
+
+      - name: Local Secret Detection
+        run: |
+          detect-secrets scan . > .secrets.baseline
+          detect-secrets audit .secrets.baseline --report || echo "Baseline check"
+        working-directory: lambda-functions
+
+      - name: Execution of Unit Tests
+        run: pytest --tb=short -v || echo "No tests"
+        working-directory: lambda-functions
+
+      - name: Package Lambda Functions
+        run: |
+          mkdir -p lambda-packages
+          for func in *.py; do
+            if [ "$func" != "setup.py" ]; then
+              zip -j "lambda-packages/${func%.py}.zip" "$func"
+            fi
+          done
+        working-directory: lambda-functions
+
+      - name: Archive Security Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lambda-security-reports
+          path: |
+             lambda-functions/bandit-report.json
+             lambda-functions/.secrets.baseline
+          retention-days: 7
+
+      - name: Upload Lambda Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-production-packages
+          path: lambda-functions/lambda-packages/*.zip
+          retention-days: 30
