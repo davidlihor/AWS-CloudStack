@@ -33,6 +33,11 @@ variable "s3_data_bucket_arn" {
   type        = string
 }
 
+variable "s3_data_bucket_id" {
+  description = "ID of the S3 data bucket for GuardDuty malware protection"
+  type        = string
+}
+
 variable "sqs_queue_arns" {
   description = "Map of SQS queue ARNs"
   type = object({

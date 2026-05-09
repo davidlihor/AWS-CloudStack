@@ -10,7 +10,9 @@ locals {
     "cleanup_task"   = { timeout = 30, memory = 256, needs_s3_delete = true, needs_dynamo = true }
   }
 
-  bucket_name   = lower("${var.project_name}-project-${random_string.suffix.result}")
-  bucket_data   = lower("${var.project_name}-data-${random_string.suffix.result}")
-  bucket_config = lower("${var.project_name}-config-${random_string.suffix.result}")
+  s3_suffix = "-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}-an"
+
+  bucket_name   = lower("${var.project_name}-project${local.s3_suffix}")
+  bucket_data   = lower("${var.project_name}-data${local.s3_suffix}")
+  bucket_config = lower("${var.project_name}-config${local.s3_suffix}")
 }

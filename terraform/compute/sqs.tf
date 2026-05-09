@@ -90,17 +90,31 @@ resource "aws_sqs_queue_policy" "allow_pipes_cleanup" {
   queue_url = aws_sqs_queue.task_deletion_queue.id
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "pipes.amazonaws.com"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pipes.amazonaws.com"
+        }
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.task_deletion_queue.arn
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = var.lambda_role_arns["cleanup_task"]
+        }
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = aws_sqs_queue.task_deletion_queue.arn
       }
-      Action = [
-        "sqs:ReceiveMessage",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes"
-      ]
-      Resource = aws_sqs_queue.task_deletion_queue.arn
-    }]
+    ]
   })
 }

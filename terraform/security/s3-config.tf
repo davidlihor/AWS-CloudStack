@@ -1,8 +1,9 @@
 module "s3_config_logs" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "5.11.0"
+  version = "5.13.0"
 
   bucket        = var.bucket_config_name
+  bucket_namespace = "account-regional"
   force_destroy = !var.is_production
 
   control_object_ownership = true
@@ -36,6 +37,25 @@ module "s3_config_logs" {
           "s3:GetBucketAcl",
           "s3:ListBucket"
         ]
+        Resource = "arn:aws:s3:::${var.bucket_config_name}"
+      },
+       {
+        Sid    = "AllowMacieExport"
+        Effect = "Allow"
+        Principal = { Service = "macie.amazonaws.com" }
+        Action   = "s3:PutObject"
+        Resource = "arn:aws:s3:::${var.bucket_config_name}/macie-results/*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid    = "AllowMacieGetLocation"
+        Effect = "Allow"
+        Principal = { Service = "macie.amazonaws.com" }
+        Action   = "s3:GetBucketLocation"
         Resource = "arn:aws:s3:::${var.bucket_config_name}"
       }
     ]

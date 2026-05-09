@@ -52,6 +52,7 @@ module "security" {
   bucket_config_name  = local.bucket_config
   dynamodb_table_arn  = module.storage.dynamodb_table_arn
   s3_data_bucket_arn  = module.storage.s3_data_bucket_arn
+  s3_data_bucket_id   = module.storage.s3_data_bucket_id
 
   sqs_queue_arns = {
     task_deletion_queue_arn    = module.compute.sqs_task_deletion_queue_arn

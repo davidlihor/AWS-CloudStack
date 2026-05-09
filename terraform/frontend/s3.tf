@@ -1,8 +1,9 @@
 module "s3-bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "5.11.0"
+  version = "5.13.0"
 
   bucket = var.bucket_name
+  bucket_namespace = "account-regional" 
 
   block_public_acls       = false
   block_public_policy     = false
